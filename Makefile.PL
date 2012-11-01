@@ -33,6 +33,7 @@ WriteMakefile(
             },
         )
     ),
+    EXE_FILES => ['bin/tt'],
 
     PREREQ_PM => {
         'File::Spec'  => '0',
