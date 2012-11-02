@@ -18,9 +18,14 @@ sub new {
 
     my $home = File::HomeDir->my_home;
 
-    $self->{file} = File::Spec->catfile($home, '.ttrc');
+    my $tt_dir = File::Spec->catfile($home, '.tt');
+    mkdir $tt_dir;
 
-    die "File '$self->{file}' does not exist\n" unless -r $self->{file};
+    $self->{file} = File::Spec->catfile($tt_dir, 'tasks');
+    if (!-r $self->{file}) {
+        open my $fh, '>', $self->{file};
+        close $fh;
+    }
 
     return $self;
 }
@@ -38,19 +43,17 @@ sub run {
         return;
     }
 
-    #require TT::Command::Report;
     my $command_class = 'TT::Command::' . ucfirst($command);
-    my $command_path = $command_class;
+    my $command_path  = $command_class;
     $command_path =~ s{::}{/}g;
     eval { require "$command_path.pm"; 1 } or do {
-        warn $@;
         die "Unknown command '$command'\n";
     };
 
     $command = $command_class->new(file => $self->{file});
-    $command->run;
+    $command->run(@argv);
 
-    if (defined (my $output = $command->get_output)) {
+    if (defined(my $output = $command->get_output)) {
         print $output;
     }
 }

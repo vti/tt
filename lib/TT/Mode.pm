@@ -32,6 +32,8 @@ sub _read_last_command {
     my $file = TT::File->new(file => $self->{file});
     my $last_line = $file->read_last_line;
 
+    return unless $last_line;
+
     my ($last_command) = $last_line =~ m/^([\S]+)/;
 
     return $last_command;

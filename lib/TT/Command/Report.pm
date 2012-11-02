@@ -7,73 +7,56 @@ use base 'TT::Command::Base';
 
 use Time::Piece;
 use Text::Wrap ();
+use TT::Parser;
 
 sub run {
     my $self = shift;
 
     $self->output('Report');
-    $self->output('-' x 50);
+    $self->output('-' x 52);
 
-    my $total;
-    my $start;
-    my @comments;
+    my $total = 0;
+
+    my $parser = TT::Parser->new(
+        cb => sub {
+            my $task = shift;
+
+            $total += $task->{elapsed};
+
+            my $elapsed    = gmtime($task->{elapsed})->strftime('%T');
+            my $start_time = gmtime($task->{start})->strftime('%Y-%m-%d %T');
+
+            my $finish_time =
+              $task->{finish}
+              ? gmtime($task->{finish})->strftime('%Y-%m-%d %T')
+              : ('working...' . (' ' x 9));
+
+            $self->output("$start_time - $finish_time [$elapsed]");
+
+            if (my $comment = $task->{comment}) {
+                $Text::Wrap::columns = 52;
+                $comment = Text::Wrap::wrap('', '', $comment);
+                $self->output($comment);
+            }
+
+            $self->output('-' x 52);
+        }
+    );
 
     open my $fh, '<', $self->{file} or die $!;
     while (defined(my $line = <$fh>)) {
         chomp $line;
 
-        my ($command, $time, $comment) = $line
-          =~ m/^([\S]+)\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})(?:\s*(.*))?$/;
+        $parser->parse($line);
 
-        next unless $command;
-
-        if ($command eq 'start') {
-            $start = $time;
-            push @comments, $comment if $comment;
-        }
-        elsif ($command eq 'finish') {
-            my $diff =
-                Time::Piece->new->strptime($time,  '%Y-%m-%d %T')
-              - Time::Piece->new->strptime($start, '%Y-%m-%d %T');
-
-            $total += $diff;
-
-            my $elapsed = $self->_epoch_to_time($diff);
-
-            $self->output("$start - $time $elapsed");
-
-            if (@comments) {
-                my $comments = join "\n", @comments;
-
-                $Text::Wrap::columns = 50;
-                $comments = Text::Wrap::wrap('', '', $comments);
-                $self->output($comments);
-
-                @comments = ();
-            }
-
-        }
-        elsif ($command eq 'comment') {
-            push @comments, join ' ', $comment if $comment;
-        }
     }
     close $fh;
 
-    $self->output('-' x 50);
-    $self->output('Total: ' . $self->_epoch_to_time($total));
+    $parser->parse;
+
+    $self->output((' ' x 36) . 'Total: ' . gmtime($total)->strftime('%T'));
 
     return $self;
-}
-
-sub _epoch_to_time {
-    my $self = shift;
-    my ($time) = @_;
-
-    my $hours   = sprintf('%02d', int($time / 3600));
-    my $minutes = sprintf('%02d', int(($time - $hours * 3600) / 60));
-    my $seconds = sprintf('%02d', $time - $hours * 3600 - $minutes * 60);
-
-    return "$hours:$minutes:$seconds";
 }
 
 1;
