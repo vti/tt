@@ -11,13 +11,17 @@ use TT::Parser;
 
 sub run {
     my $self = shift;
+    my ($filter) = @_;
 
     $self->output('Report');
     $self->output('-' x 52);
 
     my $total = 0;
 
+    $filter ||= 'today';
+
     my $parser = TT::Parser->new(
+        filter => $self->{filter} || 'today',
         cb => sub {
             my $task = shift;
 

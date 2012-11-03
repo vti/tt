@@ -43,6 +43,13 @@ sub parse {
     elsif ($command eq 'finish') {
         my $result = $self->{result};
 
+        if ($self->{filter} && $self->{filter} eq 'today') {
+            my $today = gmtime->strftime('%Y-%m-%d');
+
+            delete $self->{result};
+            return unless $today eq $date;
+        }
+
         $result->{finish} =
           gmtime->strptime("$date $time", '%Y-%m-%d %T')->epoch;
 

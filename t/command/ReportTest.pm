@@ -89,7 +89,7 @@ sub _build_command {
     $self->{file} = $file;
     $file->seek(0, SEEK_END);
 
-    return TT::Command::Report->new(file => $file->filename);
+    return TT::Command::Report->new(filter => 'all', file => $file->filename);
 }
 
 1;
