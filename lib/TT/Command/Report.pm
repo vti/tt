@@ -20,19 +20,21 @@ sub run {
 
     $filter ||= 'today';
 
-    my $parser = TT::Parser->new(
-        filter => $self->{filter} || 'today',
+    my $parser = $self->_build_parser(
+        filter => $filter || 'today',
         cb => sub {
             my $task = shift;
 
+            $task->{elapsed} ||= $self->_current_time - $task->{start};
+
             $total += $task->{elapsed};
 
-            my $elapsed    = gmtime($task->{elapsed})->strftime('%T');
-            my $start_time = gmtime($task->{start})->strftime('%Y-%m-%d %T');
+            my $elapsed = $self->_format_to_hours($task->{elapsed});
+            my $start_time = $self->_time($task->{start})->strftime('%Y-%m-%d %T');
 
             my $finish_time =
               $task->{finish}
-              ? gmtime($task->{finish})->strftime('%Y-%m-%d %T')
+              ? $self->_time($task->{finish})->strftime('%Y-%m-%d %T')
               : ('working...' . (' ' x 9));
 
             $self->output("$start_time - $finish_time [$elapsed]");
@@ -58,9 +60,41 @@ sub run {
 
     $parser->parse;
 
-    $self->output((' ' x 36) . 'Total: ' . gmtime($total)->strftime('%T'));
+    $self->output((' ' x 36) . 'Total: ' . $self->_format_to_hours($total));
 
     return $self;
+}
+
+sub _format_to_hours {
+    my $self = shift;
+    my ($time) = @_;
+
+    my $formatted    = $self->_time($time)->strftime('%T');
+    if ($time > 3600 * 24) {
+        my $days = int($time / (24 * 3600));
+        $formatted =~ s{^(\d\d)}{$1 + $days * 24}e;
+    }
+
+    return $formatted;
+}
+
+sub _build_parser {
+    my $self = shift;
+
+    return TT::Parser->new(@_);
+}
+
+sub _current_time {
+    my $self = shift;
+
+    return time;
+}
+
+sub _time {
+    my $self = shift;
+    my ($epoch) = @_;
+
+    return gmtime($epoch);
 }
 
 1;
